@@ -101,8 +101,8 @@ const worldChainSepolia: Chain = {
     decimals: 18,
   },
   rpcUrls: {
-    default: { http: ['https://worldchain-sepolia.drpc.org'] },
-    public: { http: ['https://worldchain-sepolia.drpc.org'] },
+    default: { http: ['https://worldchain-sepolia.gateway.tenderly.co'] },
+    public: { http: ['https://worldchain-sepolia.gateway.tenderly.co'] },
   },
   blockExplorers: {
     default: { name: 'World Chain Explorer', url: 'https://explorer-sepolia.worldchain.space' },

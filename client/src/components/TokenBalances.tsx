@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { motion } from 'framer-motion';
-import { Wallet, TrendingUp, ExternalLink, Sparkles } from 'lucide-react';
+import { Wallet, TrendingUp, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { useTokenBalances } from '../hooks/useTokenBalances';
 import { useTokenStore } from '../store/tokenStore';
-import { formatCurrency, formatTokenAmount, getBlockExplorerUrl } from '../lib/utils';
+import { formatCurrency } from '../lib/utils';
 import { cn } from '../lib/utils';
+import TokenBalanceItem from './TokenBalanceItem';
 
 const TokenBalances: React.FC = () => {
   const { isConnected } = useAccount();
@@ -257,74 +258,12 @@ const TokenBalances: React.FC = () => {
                   );
                   
                   return (
-                    <motion.div
+                    <TokenBalanceItem 
                       key={`${balance.chainId}-${balance.symbol}-${balance.tokenAddress || 'native'}`}
-                      variants={itemVariants}
-                      className={cn(
-                        "flex items-center justify-between p-4 border rounded-lg transition-colors hover:bg-muted/50",
-                        balance.isConnectedChain && "bg-primary/5 border-primary/20",
-                        isDust && "border-yellow-200 bg-yellow-50/50"
-                      )}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-semibold">
-                              {balance.symbol.slice(0, 3)}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{balance.symbol}</span>
-                            {isDust && (
-                              <Badge variant="warning" className="text-xs">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                Dust
-                              </Badge>
-                            )}
-                            {balance.isConnectedChain && (
-                              <Badge variant="success" className="text-xs">
-                                Connected
-                              </Badge>
-                            )}
-                            {balance.isEstimatedPrice && (
-                              <Badge variant="outline" className="text-xs">
-                                Est. Price
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {balance.chainName} (ID: {balance.chainId})
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right space-y-1">
-                        <div className="font-medium">
-                          {formatTokenAmount(balance.formattedBalance)} {balance.symbol}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">
-                            {balance.price ? formatCurrency(balance.price) : '—'}
-                          </span>
-                          {balance.tokenAddress && (
-                            <a
-                              href={getBlockExplorerUrl(balance.chainId, balance.tokenAddress)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                        <div className="font-semibold">
-                          {balance.value ? formatCurrency(balance.value) : '—'}
-                        </div>
-                      </div>
-                    </motion.div>
+                      balance={balance}
+                      isDust={isDust}
+                      itemVariants={itemVariants}
+                    />
                   );
                 })}
               </div>

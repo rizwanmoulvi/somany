@@ -51,13 +51,24 @@
   border-color: hsl(var(--border));
 }
 
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   background-image: 
     linear-gradient(to right, #e5e7eb 1px, transparent 1px),
     linear-gradient(to bottom, #e5e7eb 1px, transparent 1px),
-    radial-gradient(circle at 0 0, #9ca3af 3px, transparent 3px);
-  background-size: 100px 100px;
-  background-position: 0 0;
+    radial-gradient(circle at 0 0, #9ca3af 3px, transparent 3px),
+    radial-gradient(circle 800px at 100% 200px, #d5c5ff, transparent);
+  background-size: 
+    100px 100px,   
+    100px 100px,  
+    100px 100px,  
+    100% 100%;  
+  background-position: 
+    0 0,
+    0 0,
+    0 0,
+    0 0;
 }
+

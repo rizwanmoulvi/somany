@@ -19,6 +19,12 @@ const ethLockAbi = parseAbi([
   'function lockedBalances(address user) view returns (uint256)'
 ]);
 
+// Chainlink Price Feed ABI
+const priceFeedAbi = parseAbi([
+  'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
+  'function decimals() view returns (uint8)'
+]);
+
 interface TeleportedNetworkProps {
   className?: string;
 }
@@ -34,10 +40,12 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
   const ETH_LOCK_ADDRESS = '0x1231A2cf8D00167BB108498B81ee37a05Df4e12F'; // On Sepolia
   const SEPOLIA_RPC_URL = 'https://eth-sepolia.blastapi.io/136bb64a-7b61-439f-9ac7-2c3d0b92404f';
   const SEPOLIA_CHAIN_ID = 11155111;
+  const ETH_USD_PRICE_FEED = '0x694AA1769357215DE4FAC081bf1f309aDC325306'; // ETH/USD Price Feed on Sepolia
   
-  // State for balances
+  // State for balances and prices
   const [wethBalance, setWethBalance] = useState<string>('0');
   const [lockedEthBalance, setLockedEthBalance] = useState<string>('0');
+  const [ethPrice, setEthPrice] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,9 +106,28 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
           args: [address as `0x${string}`]
         });
         
-        // Format balances
+        // Fetch ETH/USD price from Chainlink
+        const [roundData, priceFeedDecimals] = await Promise.all([
+          sepoliaClient.readContract({
+            address: ETH_USD_PRICE_FEED as `0x${string}`,
+            abi: priceFeedAbi,
+            functionName: 'latestRoundData'
+          }),
+          sepoliaClient.readContract({
+            address: ETH_USD_PRICE_FEED as `0x${string}`,
+            abi: priceFeedAbi,
+            functionName: 'decimals'
+          })
+        ]);
+        
+        // Calculate ETH price in USD
+        const priceData = roundData as any;
+        const price = Number(priceData[1]) / 10 ** Number(priceFeedDecimals as number);
+        
+        // Format balances and set price
         setWethBalance(formatEther(wethBalanceRaw as bigint));
         setLockedEthBalance(formatEther(lockedEthBalanceRaw as bigint));
+        setEthPrice(price);
       } catch (err) {
         console.error('Error fetching teleported balances:', err);
         setError('Failed to fetch teleported token balances');
@@ -122,9 +149,6 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   };
-  
-  // Price estimation for ETH (simplified)
-  const ethPrice = 2500; // Example price in USD
   
   return (
     <motion.div
@@ -207,7 +231,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                         {formatTokenAmount(wethBalance)} wETH
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        ≈ {formatCurrency(parseFloat(wethBalance) * ethPrice)}
+                        ≈ {ethPrice !== null ? formatCurrency(parseFloat(wethBalance) * ethPrice) : 'Loading price...'}
                       </div>
                     </div>
                     
@@ -244,7 +268,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                         {formatTokenAmount(lockedEthBalance)} ETH
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        ≈ {formatCurrency(parseFloat(lockedEthBalance) * ethPrice)}
+                        ≈ {ethPrice !== null ? formatCurrency(parseFloat(lockedEthBalance) * ethPrice) : 'Loading price...'}
                       </div>
                     </div>
                     

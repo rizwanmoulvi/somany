@@ -45,17 +45,14 @@ const priceFeedAddresses: Record<number, { [symbol: string]: { address: string, 
     'ETH': { address: '0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1', decimals: 8 },
     'USDC': { address: '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E', decimals: 8 }
   },
-  999999999: {
-    'ETH': { address: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', decimals: 8 }
+  300: {
+    'ETH': { address: '0xfEefF7c3fB57d18C5C6Cdd71e45D2D0b4F9377bF', decimals: 8 }
   },
   80002: {
     'POL': { address: '0x001382149eBa3441043c1c66972b4772963f5D43', decimals: 18 }
   },
   534351: {
     'ETH': { address: '0x59F1ec1f10bD7eD9B938431086bC1D9e233ECf41', decimals: 8 }
-  },
-  44787: {
-    'CELO': { address: '0x022F9dCC73C5Fb43F2b4eF2EF9ad3eDD1D853946', decimals: 18 }
   },
   10143: {
     'MON': { address: '0x0c76859E85727683Eeba0C70Bc2e0F5781337818', decimals: 18 }

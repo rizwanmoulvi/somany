@@ -6,7 +6,14 @@ import { Slider } from './ui/slider';
 import { Button } from './ui/button';
 import { TeleportToken } from './TeleportToken';
 import { TokenBalance } from '../store/tokenStore';
-import { formatCurrency, formatTokenAmount, getBlockExplorerUrl, cn } from '../lib/utils';
+import { 
+  formatCurrency, 
+  formatTokenAmount, 
+  getBlockExplorerUrl, 
+  getChainIconUrl, 
+  getTokenIconUrl, 
+  cn 
+} from '../lib/utils';
 
 interface TokenBalanceItemProps {
   balance: TokenBalance;
@@ -47,10 +54,29 @@ const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, it
       <div className="flex items-center justify-between">
         {/* Left: Token Info */}
         <div className="w-1/4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-semibold">
-              {balance.symbol.slice(0, 3)}
-            </span>
+          <div className="relative h-10 w-10 flex-shrink-0">
+            {/* Network/Chain Icon (big circle) */}
+            <img 
+              src={getChainIconUrl(balance.chainId)} 
+              alt={balance.chainName}
+              className="h-10 w-10 rounded-full object-cover border border-border"
+              onError={(e) => {
+                // Fallback if image fails to load
+                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${balance.chainName.slice(0,2)}&background=random&color=fff&size=128`;
+              }}
+            />
+            
+            {/* Token Icon (small overlay) */}
+            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border border-background overflow-hidden bg-background">
+              <img 
+                src={getTokenIconUrl(balance.chainId, balance.symbol, balance.tokenAddress || undefined)} 
+                alt={balance.symbol}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${balance.symbol}&background=random&color=fff&size=64`;
+                }}
+              />
+            </div>
           </div>
           
           <div className="space-y-1 min-w-0">

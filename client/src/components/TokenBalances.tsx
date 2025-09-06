@@ -10,6 +10,7 @@ import { useTokenStore } from '../store/tokenStore';
 import { formatCurrency } from '../lib/utils';
 import { cn } from '../lib/utils';
 import TokenBalanceItem from './TokenBalanceItem';
+import TeleportedNetwork from './TeleportedNetwork';
 
 const TokenBalances: React.FC = () => {
   const { isConnected } = useAccount();
@@ -143,6 +144,11 @@ const TokenBalances: React.FC = () => {
       initial="hidden"
       animate="visible"
     >
+      {/* Teleported Network */}
+      {isConnected && (
+        <TeleportedNetwork />
+      )}
+      
       {/* Portfolio Overview */}
       <motion.div variants={itemVariants}>
         <Card>

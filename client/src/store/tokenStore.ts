@@ -30,6 +30,8 @@ interface TokenStore {
   selectedDustTokens: string[]
   dustThresholdUSD: number
   totalPortfolioValue: number
+  teleportRefreshTrigger: number
+  teleportedAssetsValue: number
   
   // Actions
   setBalances: (balances: TokenBalance[]) => void
@@ -41,6 +43,8 @@ interface TokenStore {
   deselectAllDust: () => void
   setDustThreshold: (threshold: number) => void
   updatePortfolioValue: () => void
+  triggerTeleportRefresh: () => void
+  setTeleportedAssetsValue: (value: number) => void
   
   // Computed
   getSelectedDustTokens: () => DustToken[]
@@ -59,6 +63,8 @@ export const useTokenStore = create<TokenStore>()(
       selectedDustTokens: [],
       dustThresholdUSD: 5.0,
       totalPortfolioValue: 0,
+      teleportRefreshTrigger: 0,
+      teleportedAssetsValue: 0,
 
       // Actions
       setBalances: (balances) => {
@@ -123,12 +129,22 @@ export const useTokenStore = create<TokenStore>()(
       },
 
       updatePortfolioValue: () => {
-        const { balances } = get()
-        const totalValue = balances
+        const { balances, teleportedAssetsValue } = get()
+        const mainBalancesValue = balances
           .filter(b => b.value !== undefined)
           .reduce((sum, balance) => sum + (balance.value || 0), 0)
         
+        const totalValue = mainBalancesValue + teleportedAssetsValue
         set({ totalPortfolioValue: totalValue })
+      },
+
+      triggerTeleportRefresh: () => {
+        set({ teleportRefreshTrigger: Date.now() })
+      },
+
+      setTeleportedAssetsValue: (teleportedAssetsValue) => {
+        set({ teleportedAssetsValue })
+        get().updatePortfolioValue()
       },
 
       // Computed getters

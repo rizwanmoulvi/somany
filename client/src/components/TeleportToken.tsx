@@ -54,12 +54,15 @@ export const TeleportToken: React.FC<TeleportTokenProps> = ({
     if (onTeleportStart) onTeleportStart();
     
     try {
-      await writeContractAsync({
+      // Send the transaction
+      const hash = await writeContractAsync({
         address: contractAddress as `0x${string}`,
         abi: lockAbi,
         functionName: 'lock',
         value: parseEther(maxAmount)
       });
+      
+      console.log('Teleport transaction sent:', hash);
       setIsSuccess(true);
       if (onTeleportComplete) onTeleportComplete();
       setTimeout(() => setIsSuccess(false), 3000); // Reset success state after 3s

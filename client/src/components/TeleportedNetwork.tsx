@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { formatEther, parseAbi, createPublicClient, http } from 'viem';
 import { motion } from 'framer-motion';
-import { Wallet, ExternalLink, Zap } from 'lucide-react';
+import { ExternalLink, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { getChainIconUrl, formatCurrency, formatTokenAmount, cn } from '../lib/utils';
+import { Skeleton } from './ui/skeleton';
+import { formatCurrency, formatTokenAmount, cn } from '../lib/utils';
 import { useTokenStore } from '../store/tokenStore';
 
 // ERC-20 ABI for balance checking
@@ -32,7 +33,7 @@ interface TeleportedNetworkProps {
 
 const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
   const { address, isConnected } = useAccount();
-  const { balances, setBalances, updatePortfolioValue } = useTokenStore();
+  const { setTeleportedAssetsValue, teleportRefreshTrigger } = useTokenStore();
   
   // Network constants
   const SONIC_CHAIN_ID = 14601;
@@ -51,129 +52,102 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch balances when connected
-  useEffect(() => {
-    const fetchBalances = async () => {
-      if (!isConnected || !address) {
-        setIsLoading(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Create clients
-        const sonicClient = createPublicClient({
-          chain: {
-            id: SONIC_CHAIN_ID,
-            name: SONIC_NETWORK_NAME,
-            network: 'sonic',
-            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-            rpcUrls: {
-              default: { http: [SONIC_RPC_URL] },
-              public: { http: [SONIC_RPC_URL] },
-            },
-          },
-          transport: http()
-        });
-        
-        const sepoliaClient = createPublicClient({
-          chain: {
-            id: SEPOLIA_CHAIN_ID,
-            name: 'Sepolia',
-            network: 'sepolia',
-            nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
-            rpcUrls: {
-              default: { http: [SEPOLIA_RPC_URL] },
-              public: { http: [SEPOLIA_RPC_URL] },
-            },
-          },
-          transport: http()
-        });
-        
-        // Fetch wETH balance on Sonic
-        const wethBalanceRaw = await sonicClient.readContract({
-          address: WETH_TOKEN_ADDRESS as `0x${string}`,
-          abi: erc20Abi,
-          functionName: 'balanceOf',
-          args: [address as `0x${string}`]
-        });
-        
-        // Fetch locked ETH balance on Sepolia
-        const lockedEthBalanceRaw = await sepoliaClient.readContract({
-          address: ETH_LOCK_ADDRESS as `0x${string}`,
-          abi: ethLockAbi,
-          functionName: 'lockedBalances',
-          args: [address as `0x${string}`]
-        });
-        
-        // Fetch ETH/USD price from Chainlink
-        const [roundData, priceFeedDecimals] = await Promise.all([
-          sepoliaClient.readContract({
-            address: ETH_USD_PRICE_FEED as `0x${string}`,
-            abi: priceFeedAbi,
-            functionName: 'latestRoundData'
-          }),
-          sepoliaClient.readContract({
-            address: ETH_USD_PRICE_FEED as `0x${string}`,
-            abi: priceFeedAbi,
-            functionName: 'decimals'
-          })
-        ]);
-        
-        // Calculate ETH price in USD
-        const priceData = roundData as any;
-        const price = Number(priceData[1]) / 10 ** Number(priceFeedDecimals as number);
-        
-        // Format balances and set price
-        const formattedWethBalance = formatEther(wethBalanceRaw as bigint);
-        const formattedLockedEthBalance = formatEther(lockedEthBalanceRaw as bigint);
-        setWethBalance(formattedWethBalance);
-        setLockedEthBalance(formattedLockedEthBalance);
-        setEthPrice(price);
-        
-        // Add wETH to the balances array in the store to include in total portfolio value
-        const wethValue = parseFloat(formattedWethBalance) * price;
-        
-        // Create or update the wETH entry in the balances array
-        const updatedBalances = [...balances];
-        const wethIndex = updatedBalances.findIndex(
-          b => b.chainId === SONIC_CHAIN_ID && b.symbol === 'wETH' && b.tokenAddress === WETH_TOKEN_ADDRESS
-        );
-        
-        const wethEntry = {
-          chainId: SONIC_CHAIN_ID,
-          chainName: SONIC_NETWORK_NAME,
-          symbol: 'wETH',
-          balance: formattedWethBalance,
-          formattedBalance: formatTokenAmount(formattedWethBalance),
-          tokenName: 'Wrapped Ether',
-          tokenAddress: WETH_TOKEN_ADDRESS,
-          isConnectedChain: false,
-          price: price,
-          value: wethValue,
-          isEstimatedPrice: false
-        };
-        
-        if (wethIndex >= 0) {
-          updatedBalances[wethIndex] = wethEntry;
-        } else {
-          updatedBalances.push(wethEntry);
-        }
-        
-        // Update the store with the new balances array
-        setBalances(updatedBalances);
-      } catch (err) {
-        console.error('Error fetching teleported balances:', err);
-        setError('Failed to fetch teleported token balances');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Function to refetch balances (can be called externally)
+  const refetchTeleportedBalances = async () => {
+    if (!isConnected || !address) {
+      setIsLoading(false);
+      return;
+    }
     
-    fetchBalances();
-  }, [address, isConnected]);
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Create clients
+      const sonicClient = createPublicClient({
+        chain: {
+          id: SONIC_CHAIN_ID,
+          name: SONIC_NETWORK_NAME,
+          network: 'sonic',
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          rpcUrls: {
+            default: { http: [SONIC_RPC_URL] },
+            public: { http: [SONIC_RPC_URL] },
+          },
+        },
+        transport: http()
+      });
+      
+      const sepoliaClient = createPublicClient({
+        chain: {
+          id: SEPOLIA_CHAIN_ID,
+          name: 'Sepolia',
+          network: 'sepolia',
+          nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+          rpcUrls: {
+            default: { http: [SEPOLIA_RPC_URL] },
+            public: { http: [SEPOLIA_RPC_URL] },
+          },
+        },
+        transport: http()
+      });
+      
+      // Fetch wETH balance on Sonic
+      const wethBalanceRaw = await sonicClient.readContract({
+        address: WETH_TOKEN_ADDRESS as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [address as `0x${string}`]
+      });
+      
+      // Fetch locked ETH balance on Sepolia
+      const lockedEthBalanceRaw = await sepoliaClient.readContract({
+        address: ETH_LOCK_ADDRESS as `0x${string}`,
+        abi: ethLockAbi,
+        functionName: 'lockedBalances',
+        args: [address as `0x${string}`]
+      });
+      
+      // Fetch ETH/USD price from Chainlink
+      const [roundData, priceFeedDecimals] = await Promise.all([
+        sepoliaClient.readContract({
+          address: ETH_USD_PRICE_FEED as `0x${string}`,
+          abi: priceFeedAbi,
+          functionName: 'latestRoundData'
+        }),
+        sepoliaClient.readContract({
+          address: ETH_USD_PRICE_FEED as `0x${string}`,
+          abi: priceFeedAbi,
+          functionName: 'decimals'
+        })
+      ]);
+      
+      // Calculate ETH price in USD
+      const priceData = roundData as any;
+      const price = Number(priceData[1]) / 10 ** Number(priceFeedDecimals as number);
+      
+      // Format balances and set price
+      const formattedWethBalance = formatEther(wethBalanceRaw as bigint);
+      const formattedLockedEthBalance = formatEther(lockedEthBalanceRaw as bigint);
+      setWethBalance(formattedWethBalance);
+      setLockedEthBalance(formattedLockedEthBalance);
+      setEthPrice(price);
+      
+      // Teleported assets are displayed separately and should not be counted in portfolio
+      // Portfolio Overview shows "token balances across multiple blockchain networks" only
+      setTeleportedAssetsValue(0);
+    } catch (err) {
+      console.error('Error fetching teleported balances:', err);
+      setError('Failed to fetch teleported token balances');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch balances when connected or when teleport refresh is triggered
+  useEffect(() => {
+    refetchTeleportedBalances();
+  }, [address, isConnected, teleportRefreshTrigger]);
   
   // If user isn't connected, show a message
   if (!isConnected) {
@@ -211,11 +185,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="text-center py-8 text-red-500">
               <p>{error}</p>
               <p className="text-sm mt-2">Please check your network connection and try again.</p>
@@ -264,10 +234,18 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                     
                     <div className="mt-4">
                       <div className="text-2xl font-bold">
-                        {formatTokenAmount(wethBalance)} wETH
+                        {isLoading ? (
+                          <Skeleton className="h-8 w-36 mb-1" />
+                        ) : (
+                          `${formatTokenAmount(wethBalance)} wETH`
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        ≈ {ethPrice !== null ? formatCurrency(parseFloat(wethBalance) * ethPrice) : 'Loading price...'}
+                        {isLoading ? (
+                          <Skeleton className="h-4 w-28" />
+                        ) : (
+                          `≈ ${ethPrice !== null ? formatCurrency(parseFloat(wethBalance) * ethPrice) : 'Loading price...'}`
+                        )}
                       </div>
                     </div>
                     
@@ -301,10 +279,18 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                     
                     <div className="mt-4">
                       <div className="text-2xl font-bold">
-                        {formatTokenAmount(lockedEthBalance)} ETH
+                        {isLoading ? (
+                          <Skeleton className="h-8 w-36 mb-1" />
+                        ) : (
+                          `${formatTokenAmount(lockedEthBalance)} ETH`
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        ≈ {ethPrice !== null ? formatCurrency(parseFloat(lockedEthBalance) * ethPrice) : 'Loading price...'}
+                        {isLoading ? (
+                          <Skeleton className="h-4 w-28" />
+                        ) : (
+                          `≈ ${ethPrice !== null ? formatCurrency(parseFloat(lockedEthBalance) * ethPrice) : 'Loading price...'}`
+                        )}
                       </div>
                     </div>
                     

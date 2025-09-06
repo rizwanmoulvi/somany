@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, Sparkles, Zap } from 'lucide-react';
+import { ExternalLink, Sparkles, Zap, Loader2 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Slider } from './ui/slider';
 import { Button } from './ui/button';
 import { TeleportToken } from './TeleportToken';
-import { TokenBalance } from '../store/tokenStore';
+import { TokenBalance, useTokenStore } from '../store/tokenStore';
+import { useTokenBalances } from '../hooks/useTokenBalances';
+import { useAccount } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { 
   formatCurrency, 
   formatTokenAmount, 
@@ -22,6 +26,11 @@ interface TokenBalanceItemProps {
 }
 
 const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, itemVariants }) => {
+  // Get refetch function to refresh balances after teleport
+  const { refetch: refetchBalances } = useTokenBalances();
+  const { address } = useAccount();
+  const { triggerTeleportRefresh } = useTokenStore();
+  const queryClient = useQueryClient();
   // Ethereum Sepolia Chain ID
   const SEPOLIA_CHAIN_ID = 11155111;
   const LOCK_CONTRACT_ADDRESS = "0x1231A2cf8D00167BB108498B81ee37a05Df4e12F";
@@ -142,8 +151,17 @@ const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, it
                 }}
                 disabled={isTeleporting || teleportAmount <= 0}
               >
-                <Zap className="mr-1 h-3 w-3" />
-                {isTeleporting ? "Sending..." : "Teleport"}
+                {isTeleporting ? (
+                  <>
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    Teleporting...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-1 h-3 w-3" />
+                    Teleport
+                  </>
+                )}
               </Button>
             </div>
           ) : (
@@ -189,14 +207,95 @@ const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, it
             tokenSymbol={balance.symbol}
             maxAmount={formattedTeleportAmount} // Use the amount from the slider
             contractAddress={LOCK_CONTRACT_ADDRESS}
-            onTeleportStart={() => setIsTeleporting(true)}
+            onTeleportStart={() => {
+              setIsTeleporting(true);
+              toast.loading('Initiating teleport...', {
+                id: 'teleport-toast',
+                duration: Infinity
+              });
+            }}
             onTeleportComplete={() => {
-              setIsTeleporting(false);
-              // You could add toast notification or other feedback here
+              // Keep loading state until relayer confirms completion
+              toast.success('Transaction sent! Waiting for relayer to process...', {
+                id: 'teleport-toast',
+                duration: 2000 // Auto-dismiss after 2 seconds
+              });
+              
+              // Poll relayer API for mint completion
+              const pollRelayerStatus = async () => {
+                let attempts = 0;
+                const maxAttempts = 60; // 60 attempts over ~2 minutes
+                const pollInterval = 2000; // 2 seconds between polls
+                const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
+                
+                const poll = async () => {
+                  attempts++;
+                  console.log(`Checking relayer status (attempt ${attempts}/${maxAttempts})...`);
+                  
+                  try {
+                    // Check if relayer has completed the mint for this user
+                    const response = await fetch(`${relayerUrl}/api/mint-status/${address}`);
+                    const data = await response.json();
+                    
+                    if (data.completed) {
+                      console.log('Relayer confirmed mint completion:', data);
+                      setIsTeleporting(false);
+                      toast.success('Teleport completed! Refreshing balances...', {
+                        id: 'teleport-toast',
+                        duration: 2000 // Auto-dismiss after 2 seconds
+                      });
+                      
+                      // Refetch both main balances and trigger teleported network refresh
+                      setTimeout(async () => {
+                        // Force a fresh fetch by invalidating and refetching
+                        queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+                        await refetchBalances();
+                        triggerTeleportRefresh(); // This will trigger TeleportedNetwork to refetch
+                        toast.success('Balances updated!', {
+                          duration: 2000
+                        });
+                      }, 1000);
+                      return;
+                    }
+                    
+                    if (attempts >= maxAttempts) {
+                      setIsTeleporting(false);
+                      toast.error('Timeout waiting for relayer. Transaction may still be processing.', {
+                        id: 'teleport-toast',
+                        duration: 2000
+                      });
+                      return;
+                    }
+                    
+                    // Continue polling
+                    setTimeout(poll, pollInterval);
+                  } catch (error) {
+                    console.error('Error checking relayer status:', error);
+                    if (attempts >= maxAttempts) {
+                      setIsTeleporting(false);
+                      toast.error('Unable to confirm completion. Please check balances manually.', {
+                        id: 'teleport-toast',
+                        duration: 2000
+                      });
+                    } else {
+                      setTimeout(poll, pollInterval);
+                    }
+                  }
+                };
+                
+                // Start polling after a short delay to allow transaction to be mined
+                setTimeout(poll, 5000);
+              };
+              
+              pollRelayerStatus();
             }}
             onTeleportError={(error) => {
               setIsTeleporting(false);
               console.error('Teleport failed:', error);
+              toast.error('Teleport failed. Please try again.', {
+                id: 'teleport-toast',
+                duration: 2000
+              });
             }}
           />
         </div>

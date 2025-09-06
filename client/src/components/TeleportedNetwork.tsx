@@ -6,6 +6,7 @@ import { Wallet, ExternalLink, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { getChainIconUrl, formatCurrency, formatTokenAmount, cn } from '../lib/utils';
+import { useTokenStore } from '../store/tokenStore';
 
 // ERC-20 ABI for balance checking
 const erc20Abi = parseAbi([
@@ -31,6 +32,7 @@ interface TeleportedNetworkProps {
 
 const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
   const { address, isConnected } = useAccount();
+  const { balances, setBalances, updatePortfolioValue } = useTokenStore();
   
   // Network constants
   const SONIC_CHAIN_ID = 14601;
@@ -125,9 +127,43 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
         const price = Number(priceData[1]) / 10 ** Number(priceFeedDecimals as number);
         
         // Format balances and set price
-        setWethBalance(formatEther(wethBalanceRaw as bigint));
-        setLockedEthBalance(formatEther(lockedEthBalanceRaw as bigint));
+        const formattedWethBalance = formatEther(wethBalanceRaw as bigint);
+        const formattedLockedEthBalance = formatEther(lockedEthBalanceRaw as bigint);
+        setWethBalance(formattedWethBalance);
+        setLockedEthBalance(formattedLockedEthBalance);
         setEthPrice(price);
+        
+        // Add wETH to the balances array in the store to include in total portfolio value
+        const wethValue = parseFloat(formattedWethBalance) * price;
+        
+        // Create or update the wETH entry in the balances array
+        const updatedBalances = [...balances];
+        const wethIndex = updatedBalances.findIndex(
+          b => b.chainId === SONIC_CHAIN_ID && b.symbol === 'wETH' && b.tokenAddress === WETH_TOKEN_ADDRESS
+        );
+        
+        const wethEntry = {
+          chainId: SONIC_CHAIN_ID,
+          chainName: SONIC_NETWORK_NAME,
+          symbol: 'wETH',
+          balance: formattedWethBalance,
+          formattedBalance: formatTokenAmount(formattedWethBalance),
+          tokenName: 'Wrapped Ether',
+          tokenAddress: WETH_TOKEN_ADDRESS,
+          isConnectedChain: false,
+          price: price,
+          value: wethValue,
+          isEstimatedPrice: false
+        };
+        
+        if (wethIndex >= 0) {
+          updatedBalances[wethIndex] = wethEntry;
+        } else {
+          updatedBalances.push(wethEntry);
+        }
+        
+        // Update the store with the new balances array
+        setBalances(updatedBalances);
       } catch (err) {
         console.error('Error fetching teleported balances:', err);
         setError('Failed to fetch teleported token balances');
@@ -170,7 +206,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
               </CardDescription>
             </div>
             <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
-              Cross-Chain Bridge
+              {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'No Address'}
             </Badge>
           </div>
         </CardHeader>

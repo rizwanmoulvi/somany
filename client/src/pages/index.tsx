@@ -11,7 +11,7 @@ const Home: NextPage = () => {
       <Head>
         <title>SoMany - Multi-Chain Dust Aggregation Protocol</title>
         <meta
-          content="Aggregate dust tokens across multiple blockchain networks into valuable SOMI tokens"
+          content="Aggregate ETH across multiple blockchain networks into wETH"
           name="description"
         />
         <link href="/favicon.ico" rel="icon" />
@@ -106,7 +106,7 @@ const Home: NextPage = () => {
                 <span className="font-semibold text-foreground">multiple blockchain networks</span>. 
                 Convert worthless small balances into valuable{' '}
                 <span className="font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  SOMI tokens
+                  wETH
                 </span>{' '}
                 with our revolutionary one-click aggregation protocol.
               </motion.p>

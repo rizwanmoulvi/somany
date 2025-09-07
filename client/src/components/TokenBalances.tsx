@@ -11,6 +11,7 @@ import { formatCurrency } from '../lib/utils';
 import { cn } from '../lib/utils';
 import TokenBalanceItem from './TokenBalanceItem';
 import TeleportedNetwork from './TeleportedNetwork';
+import { ETHTeleportSection } from './ETHTeleportSection';
 
 const TokenBalances: React.FC = () => {
   const { isConnected } = useAccount();
@@ -148,8 +149,8 @@ const TokenBalances: React.FC = () => {
       {isConnected && (
         <TeleportedNetwork />
       )}
-      
-      {/* Portfolio Overview */}
+
+            {/* Portfolio Overview */}
       <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
@@ -222,9 +223,19 @@ const TokenBalances: React.FC = () => {
           </CardContent>
         </Card>
       </motion.div>
+      
+      {/* ETH Teleport Section */}
+      {isConnected && balances && (
+        <ETHTeleportSection 
+          balances={balances}
+          itemVariants={itemVariants}
+        />
+      )}
+      
+
 
       {/* Token Balances */}
-      <motion.div variants={itemVariants}>
+      {/* <motion.div variants={itemVariants}>
         <Card>
           <CardHeader>
             <CardTitle>Token Balances</CardTitle>
@@ -281,7 +292,7 @@ const TokenBalances: React.FC = () => {
             )}
           </CardContent>
         </Card>
-      </motion.div>
+      </motion.div> */}
 
       {/* Footer Note */}
       <motion.div variants={itemVariants} className="text-center">

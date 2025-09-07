@@ -35,8 +35,8 @@ export const TeleportToken: React.FC<TeleportTokenProps> = ({
   onTeleportComplete,
   onTeleportError,
 }) => {
-  // Ethereum Sepolia Chain ID
-  const SEPOLIA_CHAIN_ID = 11155111;
+  // Supported chain IDs for teleporting
+  const SUPPORTED_CHAIN_IDS = [11155111, 84532]; // Ethereum Sepolia, Base Sepolia
   const currentChainId = useChainId();
   const { isConnected } = useAccount();
   
@@ -48,7 +48,7 @@ export const TeleportToken: React.FC<TeleportTokenProps> = ({
 
   // Function to handle token teleport
   const handleTeleport = async () => {
-    if (!isConnected || chainId !== SEPOLIA_CHAIN_ID || parseFloat(maxAmount) <= 0) return;
+    if (!isConnected || !SUPPORTED_CHAIN_IDS.includes(chainId) || parseFloat(maxAmount) <= 0) return;
     
     setIsLoading(true);
     if (onTeleportStart) onTeleportStart();
@@ -85,7 +85,7 @@ export const TeleportToken: React.FC<TeleportTokenProps> = ({
     <button 
       onClick={handleTeleport} 
       style={{ display: 'none' }} 
-      disabled={disabled || isLoading || !isConnected || chainId !== SEPOLIA_CHAIN_ID || parseFloat(maxAmount) <= 0}
+      disabled={disabled || isLoading || !isConnected || !SUPPORTED_CHAIN_IDS.includes(chainId) || parseFloat(maxAmount) <= 0}
     >
       Teleport {maxAmount} {tokenSymbol}
     </button>

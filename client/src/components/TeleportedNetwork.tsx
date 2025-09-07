@@ -40,14 +40,30 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
   const SONIC_RPC_URL = 'https://rpc.testnet.soniclabs.com';
   const SONIC_NETWORK_NAME = 'Sonic Testnet';
   const WETH_TOKEN_ADDRESS = '0xB5A3BA529840fE3bB07526688Aaa100F497C5d97';
-  const ETH_LOCK_ADDRESS = '0x1231A2cf8D00167BB108498B81ee37a05Df4e12F'; // On Sepolia
-  const SEPOLIA_RPC_URL = 'https://eth-sepolia.blastapi.io/136bb64a-7b61-439f-9ac7-2c3d0b92404f';
-  const SEPOLIA_CHAIN_ID = 11155111;
+  
+  // Support multiple source chains for locked ETH
+  const LOCK_CHAIN_CONFIGS = {
+    11155111: { // Ethereum Sepolia
+      name: "Ethereum Sepolia",
+      rpcUrl: 'https://api.zan.top/node/v1/eth/sepolia/692596371a21412d8ceafa0e21955bab',
+      lockAddress: '0x1231A2cf8D00167BB108498B81ee37a05Df4e12F',
+      explorerUrl: 'https://sepolia.etherscan.io'
+    },
+    84532: { // Base Sepolia
+      name: "Base Sepolia",
+      rpcUrl: 'https://api.zan.top/node/v1/base/sepolia/692596371a21412d8ceafa0e21955bab',
+      lockAddress: '0x983e5918fa2335a004f28E7901aBDd3f2C2324dF',
+      explorerUrl: 'https://base-sepolia.blockscout.com'
+    }
+  };
+  
   const ETH_USD_PRICE_FEED = '0x694AA1769357215DE4FAC081bf1f309aDC325306'; // ETH/USD Price Feed on Sepolia
   
   // State for balances and prices
   const [wethBalance, setWethBalance] = useState<string>('0');
   const [lockedEthBalance, setLockedEthBalance] = useState<string>('0');
+  const [lockedEthByChain, setLockedEthByChain] = useState<Record<number, string>>({});
+  const [chainErrors, setChainErrors] = useState<Record<number, string>>({});
   const [ethPrice, setEthPrice] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +79,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
     setError(null);
     
     try {
-      // Create clients
+      // Create Sonic client for wETH balance
       const sonicClient = createPublicClient({
         chain: {
           id: SONIC_CHAIN_ID,
@@ -78,19 +94,26 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
         transport: http()
       });
       
-      const sepoliaClient = createPublicClient({
-        chain: {
-          id: SEPOLIA_CHAIN_ID,
-          name: 'Sepolia',
-          network: 'sepolia',
-          nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
-          rpcUrls: {
-            default: { http: [SEPOLIA_RPC_URL] },
-            public: { http: [SEPOLIA_RPC_URL] },
+      // Create clients for each lock chain
+      const lockClients: Record<number, any> = {};
+      const lockChainIds = Object.keys(LOCK_CHAIN_CONFIGS).map(Number);
+      
+      for (const chainId of lockChainIds) {
+        const config = LOCK_CHAIN_CONFIGS[chainId as keyof typeof LOCK_CHAIN_CONFIGS];
+        lockClients[chainId] = createPublicClient({
+          chain: {
+            id: chainId,
+            name: config.name,
+            network: config.name.toLowerCase().replace(/\s+/g, '-'),
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: {
+              default: { http: [config.rpcUrl] },
+              public: { http: [config.rpcUrl] },
+            },
           },
-        },
-        transport: http()
-      });
+          transport: http()
+        });
+      }
       
       // Fetch wETH balance on Sonic
       const wethBalanceRaw = await sonicClient.readContract({
@@ -100,13 +123,43 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
         args: [address as `0x${string}`]
       });
       
-      // Fetch locked ETH balance on Sepolia
-      const lockedEthBalanceRaw = await sepoliaClient.readContract({
-        address: ETH_LOCK_ADDRESS as `0x${string}`,
-        abi: ethLockAbi,
-        functionName: 'lockedBalances',
-        args: [address as `0x${string}`]
+      // Fetch locked ETH balances from all chains
+      const lockedBalancePromises = lockChainIds.map(async (chainId) => {
+        const config = LOCK_CHAIN_CONFIGS[chainId as keyof typeof LOCK_CHAIN_CONFIGS];
+        const client = lockClients[chainId];
+        
+        try {
+          console.log(`Fetching locked balance from ${config.name} at ${config.lockAddress}...`);
+          
+          // First check if the address is a contract
+          const bytecode = await client.getBytecode({
+            address: config.lockAddress as `0x${string}`
+          });
+          
+          if (!bytecode || bytecode === '0x') {
+            console.warn(`No contract found at ${config.lockAddress} on ${config.name}`);
+            return { chainId, balance: '0', error: 'Contract not found' };
+          }
+          
+          const balance = await client.readContract({
+            address: config.lockAddress as `0x${string}`,
+            abi: ethLockAbi,
+            functionName: 'lockedBalances',
+            args: [address as `0x${string}`]
+          });
+          
+          console.log(`${config.name} locked balance:`, formatEther(balance as bigint));
+          return { chainId, balance: formatEther(balance as bigint) };
+        } catch (error: any) {
+          console.error(`Error fetching locked ETH from ${config.name}:`, error);
+          return { chainId, balance: '0', error: error?.message || 'Unknown error' };
+        }
       });
+      
+      const lockedBalances = await Promise.all(lockedBalancePromises);
+      
+      // Use Ethereum Sepolia client for price feed
+      const sepoliaClient = lockClients[11155111];
       
       // Fetch ETH/USD price from Chainlink
       const [roundData, priceFeedDecimals] = await Promise.all([
@@ -126,11 +179,24 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
       const priceData = roundData as any;
       const price = Number(priceData[1]) / 10 ** Number(priceFeedDecimals as number);
       
-      // Format balances and set price
+      // Format and aggregate balances
       const formattedWethBalance = formatEther(wethBalanceRaw as bigint);
-      const formattedLockedEthBalance = formatEther(lockedEthBalanceRaw as bigint);
+      const lockedByChain: Record<number, string> = {};
+      const errors: Record<number, string> = {};
+      let totalLockedBalance = 0;
+      
+      lockedBalances.forEach(({ chainId, balance, error }) => {
+        lockedByChain[chainId] = balance;
+        if (error) {
+          errors[chainId] = error;
+        }
+        totalLockedBalance += parseFloat(balance);
+      });
+      
       setWethBalance(formattedWethBalance);
-      setLockedEthBalance(formattedLockedEthBalance);
+      setLockedEthBalance(totalLockedBalance.toString());
+      setLockedEthByChain(lockedByChain);
+      setChainErrors(errors);
       setEthPrice(price);
       
       // Teleported assets are displayed separately and should not be counted in portfolio
@@ -292,17 +358,57 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                           `≈ ${ethPrice !== null ? formatCurrency(parseFloat(lockedEthBalance) * ethPrice) : 'Loading price...'}`
                         )}
                       </div>
+                      
+                      {/* Breakdown by chain */}
+                      {!isLoading && Object.keys(lockedEthByChain).length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          <div className="text-xs font-medium text-muted-foreground">Breakdown:</div>
+                          {Object.entries(lockedEthByChain).map(([chainIdStr, balance]) => {
+                            const chainId = Number(chainIdStr);
+                            const config = LOCK_CHAIN_CONFIGS[chainId as keyof typeof LOCK_CHAIN_CONFIGS];
+                            const hasError = chainErrors[chainId];
+                            if (!config) return null;
+                            
+                            return (
+                              <div key={chainId} className="flex justify-between items-center text-xs">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-muted-foreground">{config.name}:</span>
+                                  {hasError && (
+                                    <span className="text-red-500 text-[10px]" title={hasError}>
+                                      ⚠️
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`font-medium ${hasError ? 'text-red-500' : ''}`}>
+                                  {hasError ? 'Error' : `${formatTokenAmount(balance)} ETH`}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     
-                    <div className="mt-4 text-xs text-blue-600">
-                      <a 
-                        href={`https://sepolia.etherscan.io/address/${ETH_LOCK_ADDRESS}`}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 hover:underline"
-                      >
-                        View on Etherscan <ExternalLink className="h-3 w-3" />
-                      </a>
+                    <div className="mt-4 text-xs text-blue-600 space-y-1">
+                      {Object.entries(lockedEthByChain).map(([chainIdStr]) => {
+                        const chainId = Number(chainIdStr);
+                        const config = LOCK_CHAIN_CONFIGS[chainId as keyof typeof LOCK_CHAIN_CONFIGS];
+                        const hasError = chainErrors[chainId];
+                        if (!config) return null;
+                        
+                        return (
+                          <a 
+                            key={chainId}
+                            href={`${config.explorerUrl}/address/${config.lockAddress}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-1 hover:underline ${hasError ? 'text-red-500' : ''}`}
+                          >
+                            View {config.name} contract {hasError ? '(Check deployment)' : ''} 
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 </CardContent>

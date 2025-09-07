@@ -31,14 +31,20 @@ const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, it
   const { address } = useAccount();
   const { triggerTeleportRefresh } = useTokenStore();
   const queryClient = useQueryClient();
-  // Ethereum Sepolia Chain ID
-  const SEPOLIA_CHAIN_ID = 11155111;
-  const LOCK_CONTRACT_ADDRESS = "0x1231A2cf8D00167BB108498B81ee37a05Df4e12F";
+  // Supported chains and their contract addresses
+  const TELEPORT_CONFIGS = {
+    11155111: { // Ethereum Sepolia
+      name: "Ethereum Sepolia",
+      lockContract: "0x1231A2cf8D00167BB108498B81ee37a05Df4e12F"
+    },
+    84532: { // Base Sepolia
+      name: "Base Sepolia", 
+      lockContract: "0x983e5918fa2335a004f28E7901aBDd3f2C2324dF"
+    }
+  };
   
-  // Check if this token can be teleported (native ETH on Sepolia)
-  const canTeleport = balance.chainId === SEPOLIA_CHAIN_ID && 
-                      balance.symbol === 'ETH' && 
-                      !balance.tokenAddress;
+  // Disable individual teleport since we now have unified teleport
+  const canTeleport = false; // Unified teleport handles all ETH teleporting
   
   // State for teleport functionality (per token)
   const [teleportPercentage, setTeleportPercentage] = useState(50);
@@ -206,7 +212,7 @@ const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, it
             chainId={balance.chainId}
             tokenSymbol={balance.symbol}
             maxAmount={formattedTeleportAmount} // Use the amount from the slider
-            contractAddress={LOCK_CONTRACT_ADDRESS}
+            contractAddress={TELEPORT_CONFIGS[balance.chainId as keyof typeof TELEPORT_CONFIGS].lockContract}
             onTeleportStart={() => {
               setIsTeleporting(true);
               toast.loading('Initiating teleport...', {

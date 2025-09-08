@@ -230,6 +230,8 @@ export const useTokenBalances = () => {
     enabled: !!address && isConnected,
     staleTime: 1000 * 60 * 2, // 2 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchInterval: 1000 * 30, // Refetch every 30 seconds for timely updates
+    refetchIntervalInBackground: true, // Continue refetching when tab is not focused
     refetchOnWindowFocus: false // Don't refetch when window gains focus
   });
 };

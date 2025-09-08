@@ -4,6 +4,7 @@ import { parseEther } from 'viem';
 import { useAccount, useChainId, useWriteContract, useSwitchChain } from 'wagmi';
 import { sepolia, baseSepolia } from 'wagmi/chains';
 import { Zap, Check, Clock, AlertCircle, ChevronRight, Loader2 } from 'lucide-react';
+import NetworkIcon from './NetworkIcon';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -17,17 +18,62 @@ import { formatTokenAmount, formatCurrency } from '../lib/utils';
 
 // Chain configurations
 const TELEPORT_CONFIGS = {
+  // Active chains with deployed contracts
   11155111: { // Ethereum Sepolia
     name: "Ethereum Sepolia",
     symbol: "ETH",
     lockContract: "0x1231A2cf8D00167BB108498B81ee37a05Df4e12F",
-    icon: "⟠"
+    enabled: true,
   },
   84532: { // Base Sepolia
     name: "Base Sepolia", 
     symbol: "ETH",
     lockContract: "0x983e5918fa2335a004f28E7901aBDd3f2C2324dF",
-    icon: "🔵"
+    enabled: true,
+  },
+  
+  // Future supported chains (coming soon)
+  11155420: { // Optimism Sepolia
+    name: "Optimism Sepolia",
+    symbol: "ETH", 
+    lockContract: null,
+    enabled: false,
+  },
+  421614: { // Arbitrum Sepolia
+    name: "Arbitrum Sepolia",
+    symbol: "ETH",
+    lockContract: null,
+    enabled: false,
+  },
+  300: { // zkSync Sepolia
+    name: "zkSync Sepolia",
+    symbol: "ETH",
+    lockContract: null,
+    enabled: false,
+  },
+  80002: { // Polygon Amoy
+    name: "Polygon Amoy",
+    symbol: "MATIC",
+    lockContract: null,
+    enabled: false,
+  },
+  534351: { // Scroll Sepolia
+    name: "Scroll Sepolia",
+    symbol: "ETH",
+    lockContract: null,
+    enabled: false,
+  },
+  10143: { // Monad Testnet
+    name: "Monad Testnet",
+    symbol: "MON",
+    lockContract: null,
+    enabled: false,
+  },
+  1301: { // Unichain Sepolia
+    name: "Unichain Sepolia",
+    symbol: "ETH",
+    lockContract: null,
+    enabled: false,
   }
 };
 
@@ -97,7 +143,8 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
     
     const initialAmounts: Record<number, { percentage: number; amount: string }> = {};
     chainBalances.forEach(({ chainId, balance }) => {
-      if (TELEPORT_CONFIGS[chainId as keyof typeof TELEPORT_CONFIGS] && parseFloat(balance) > 0) {
+      const config = TELEPORT_CONFIGS[chainId as keyof typeof TELEPORT_CONFIGS];
+      if (config && config.enabled && parseFloat(balance) > 0) {
         initialAmounts[chainId] = {
           percentage: 50,
           amount: (parseFloat(balance) * 0.5).toFixed(6)
@@ -136,96 +183,29 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
   // Get chains with amounts > 0
   const activeTeleports = Object.entries(chainAmounts).filter(([_, { amount }]) => parseFloat(amount) > 0);
 
-  // Poll relayer for mint completions
-  const pollForMintCompletions = async (expectedMints: number) => {
-    if (!address) return;
+  // Handle teleport completion (no more polling)
+  const handleTeleportCompletion = async (expectedMints: number) => {
+    console.log('All transactions completed, showing success and refreshing balances...');
     
-    let completedMints = 0;
-    let attempts = 0;
-    const maxAttempts = 60; // 2 minutes total
-    const pollInterval = 2000; // 2 seconds between polls
-    const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
+    // Show immediate success
+    toast.success('All teleports completed successfully! 🚀✨', {
+      duration: 4000
+    });
     
-    const poll = async (): Promise<void> => {
-      attempts++;
-      console.log(`Checking relayer for mint completions (attempt ${attempts}/${maxAttempts})...`);
+    // Force refresh all balances after a short delay
+    setTimeout(async () => {
+      queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+      await refetchBalances();
+      triggerTeleportRefresh();
       
-      try {
-        // Check if relayer has completed a mint for this user
-        const response = await fetch(`${relayerUrl}/api/mint-status/${address}`);
-        const data = await response.json();
-        
-        if (data.completed) {
-          completedMints++;
-          console.log(`Relayer confirmed mint completion ${completedMints}/${expectedMints}:`, data);
-          
-          toast.success(`Mint completed from ${data.sourceChain}! (${completedMints}/${expectedMints})`, {
-            duration: 2000
-          });
-          
-          // If we've received all expected mints, refresh balances and complete
-          if (completedMints >= expectedMints) {
-            console.log('All mints completed, refreshing balances...');
-            
-            // Force refresh all balances
-            queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
-            await refetchBalances();
-            triggerTeleportRefresh();
-            
-            toast.success('All teleports processed! Balances updated! ✨', {
-              duration: 3000
-            });
-            
-            if (onTeleportComplete) onTeleportComplete();
-            // Reset execution flag after all completions
-            isExecutingRef.current = false;
-            return;
-          }
-        }
-        
-        // Continue polling if we haven't received all mints yet
-        if (attempts >= maxAttempts) {
-          console.warn('Timeout waiting for all mint completions');
-          toast('⚠️ Some mints may still be processing. Check balances in a moment.', {
-            duration: 3000
-          });
-          
-          // Still refresh balances in case some completed
-          queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
-          await refetchBalances();
-          triggerTeleportRefresh();
-          
-          if (onTeleportComplete) onTeleportComplete();
-          // Reset execution flag after timeout
-          isExecutingRef.current = false;
-          return;
-        }
-        
-        // Schedule next poll
-        setTimeout(poll, pollInterval);
-      } catch (error) {
-        console.error('Error checking relayer status:', error);
-        if (attempts >= maxAttempts) {
-          toast.error('Unable to confirm all completions. Please check balances manually.', {
-            duration: 3000
-          });
-          
-          // Still refresh balances
-          queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
-          await refetchBalances();
-          triggerTeleportRefresh();
-          
-          if (onTeleportComplete) onTeleportComplete();
-          // Reset execution flag on error
-          isExecutingRef.current = false;
-        } else {
-          setTimeout(poll, pollInterval);
-        }
-      }
-    };
+      toast.success('Balances refreshed!', {
+        duration: 2000
+      });
+    }, 2000);
     
-    // Start polling after a short delay to allow transactions to be mined
-    setTimeout(poll, 3000);
+    if (onTeleportComplete) onTeleportComplete();
+    // Reset execution flag
+    isExecutingRef.current = false;
   };
 
   // Execute teleports
@@ -355,11 +335,8 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
       duration: 3000
     });
 
-    // Poll relayer for mint completions
-    await pollForMintCompletions(activeTeleports.length);
-    
-    // Reset execution flag after completion
-    isExecutingRef.current = false;
+    // Handle completion without polling
+    await handleTeleportCompletion(activeTeleports.length);
   };
 
   // Reset to configuration
@@ -378,35 +355,62 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
         <div className="space-y-6">
           {/* Chain Configuration */}
           <div className="space-y-4">
-            {chainBalances.map(({ chainId, balance, price }) => {
-              const config = TELEPORT_CONFIGS[chainId as keyof typeof TELEPORT_CONFIGS];
+            {Object.entries(TELEPORT_CONFIGS).map(([chainIdStr, config]) => {
+              const chainId = Number(chainIdStr);
+              const chainBalance = chainBalances.find(b => b.chainId === chainId);
+              const balance = chainBalance?.balance || '0';
+              const price = chainBalance?.price || 0;
               const chainAmount = chainAmounts[chainId];
-              
-              if (!config || parseFloat(balance) <= 0) return null;
+              const isDisabled = !config.enabled || parseFloat(balance) <= 0;
 
               return (
-                <div key={chainId} className="p-4 rounded-lg border bg-white/50">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{config.icon}</span>
+                <motion.div 
+                  key={chainId} 
+                  className={`p-4 rounded-lg border transition-all duration-200 ${
+                    isDisabled 
+                      ? 'bg-muted/30 border-muted opacity-60' 
+                      : 'bg-background hover:bg-muted/50 border-border'
+                  }`}
+                  whileHover={isDisabled ? {} : { scale: 1.01 }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <NetworkIcon chainId={chainId} size={40} className="shadow-lg" />
                       <div>
-                        <h4 className="font-medium">{config.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Balance: {formatTokenAmount(balance)} ETH
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className={`font-semibold text-sm ${
+                            isDisabled ? 'text-muted-foreground' : 'text-foreground'
+                          }`}>{config.name}</h4>
+                          {!config.enabled && (
+                            <span className="text-xs px-2 py-1 bg-muted rounded text-muted-foreground">
+                              Coming Soon
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <span>Balance:</span>
+                          <span className={`font-medium ${
+                            isDisabled ? 'text-muted-foreground' : 'text-foreground'
+                          }`}>
+                            {parseFloat(balance) > 0 ? formatTokenAmount(balance) : '0'} {config.symbol}
+                          </span>
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">
-                        {chainAmount ? formatTokenAmount(chainAmount.amount) : '0'} ETH
+                      <div className={`font-semibold text-sm ${
+                        isDisabled ? 'text-muted-foreground' : 'text-foreground'
+                      }`}>
+                        {!isDisabled && chainAmount ? formatTokenAmount(chainAmount.amount) : '0'} {config.symbol}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {chainAmount ? formatCurrency(parseFloat(chainAmount.amount) * price) : '$0'}
+                      <div className="text-xs text-muted-foreground">
+                        {!isDisabled && chainAmount ? formatCurrency(parseFloat(chainAmount.amount) * price) : 
+                         config.enabled ? '$0' : 'N/A'}
                       </div>
                     </div>
                   </div>
                   
-                  {chainAmount && (
+                  {!isDisabled && chainAmount && (
                     <>
                       <Slider
                         value={[chainAmount.percentage]}
@@ -423,40 +427,60 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
                       </div>
                     </>
                   )}
-                </div>
+                  
+                  {isDisabled && (
+                    <div className="mt-3 p-3 bg-muted/50 rounded text-center">
+                      <p className="text-xs text-muted-foreground">
+                        {!config.enabled 
+                          ? `${config.symbol} teleport coming soon to ${config.name}`
+                          : `Connect wallet with ${config.symbol} balance to enable`
+                        }
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
               );
             })}
           </div>
 
-          {/* Summary & Action Button - Side by Side */}
+          {/* Summary & Action Button - Enhanced Layout */}
           {activeTeleports.length > 0 && (
-            <div className="flex flex-col sm:flex-row gap-4 items-end">
-              {/* Summary */}
-              <div className="flex-1 p-4 rounded-lg bg-blue-50 border border-blue-200">
-                <h4 className="font-medium mb-2">Teleport Summary</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Total Chains:</span>
-                    <span className="font-medium">{activeTeleports.length}</span>
+            <motion.div 
+              className="bg-muted/30 rounded-lg p-4 border"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="flex flex-col lg:flex-row gap-6 items-center">
+                {/* Summary */}
+                <div className="flex-1 grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-background border">
+                    <div className="text-lg font-bold">{activeTeleports.length}</div>
+                    <div className="text-xs text-muted-foreground font-medium">Networks</div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Total Value:</span>
-                    <span className="font-medium">{formatCurrency(totalValue)}</span>
+                  <div className="text-center p-3 rounded-lg bg-background border">
+                    <div className="text-lg font-bold">{formatCurrency(totalValue)}</div>
+                    <div className="text-xs text-muted-foreground font-medium">Total Value</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Action Button */}
-              <Button 
-                onClick={executeTeleports}
-                disabled={!isConnected || activeTeleports.length === 0}
-                className="w-full sm:w-auto sm:min-w-[240px]"
-                size="lg"
-              >
-                <Zap className="mr-2 h-4 w-4" />
-                Start Multi-Chain Teleport ({activeTeleports.length} chains)
-              </Button>
-            </div>
+                {/* Action Button */}
+                <motion.div 
+                  className="w-full lg:w-auto"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button 
+                    onClick={executeTeleports}
+                    disabled={!isConnected || activeTeleports.length === 0}
+                    className="w-full lg:min-w-[240px] h-12 font-semibold bg-black hover:bg-gray-800 text-white"
+                    size="lg"
+                  >
+                    Start Multi-Chain Teleport
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
           )}
 
           {/* Show button alone if no active teleports */}
@@ -464,11 +488,10 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
             <Button 
               onClick={executeTeleports}
               disabled={!isConnected || activeTeleports.length === 0}
-              className="w-full"
+              className="w-full bg-black hover:bg-gray-800 text-white"
               size="lg"
             >
-              <Zap className="mr-2 h-4 w-4" />
-              Start Multi-Chain Teleport ({activeTeleports.length} chains)
+              Start Multi-Chain Teleport
             </Button>
           )}
         </div>
@@ -476,10 +499,10 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
   }
 
   return (
-    <Card className="w-full border-blue-200 bg-gradient-to-br from-blue-50/30 to-purple-50/20">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-blue-600" />
+          <Zap className="h-5 w-5" />
           {step === 'executing' ? 'Executing Teleports...' : 'Teleport Complete!'}
         </CardTitle>
       </CardHeader>
@@ -508,14 +531,14 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className={`p-3 rounded-lg border ${
-                  isCurrentlyExecuting ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'
+                  isCurrentlyExecuting ? 'border-primary bg-muted' : 'border-border bg-background'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg">{config?.icon}</span>
+                    <NetworkIcon chainId={chainId} size={32} className="shadow-md" />
                     <div>
-                      <div className="font-medium">{config?.name}</div>
+                      <div className="font-semibold">{config?.name}</div>
                       <div className="text-sm text-muted-foreground">
                         {formatTokenAmount(amount)} ETH
                       </div>

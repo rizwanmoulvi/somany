@@ -15,9 +15,9 @@ const Home: NextPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Head>
-        <title>SoMany - Multi-Chain Dust Aggregation Protocol</title>
+        <title>SoMany - Multi-Chain Token Aggregation Protocol</title>
         <meta
-          content="Aggregate ETH across multiple blockchain networks into wETH"
+          content="Aggregate ETH across multiple blockchain networks into wETH on Sonic"
           name="description"
         />
         <link href="/favicon.ico" rel="icon" />
@@ -31,14 +31,14 @@ const Home: NextPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-            <motion.h1 
-              className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent"
+            <motion.div
+              className="text-3xl font-bold text-black tracking-tight"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              SoMany
-            </motion.h1>
+              so.many
+            </motion.div>
           
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -71,7 +71,7 @@ const Home: NextPage = () => {
                 transition={{ duration: 0.8, delay: 0.7 }}
               >
                 <span className="bg-gradient-to-r from-gray-900 via-primary to-purple-600 bg-clip-text text-transparent">
-                  Funnel Your Dust
+                  Funnel Your Tokens
                 </span>
                 <br />
                 <span className="bg-gradient-to-r from-primary to-yellow-500 bg-clip-text text-transparent">
@@ -85,11 +85,11 @@ const Home: NextPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.9 }}
               >
-                Channel scattered dust tokens from{' '}
+                Channel scattered tokens from{' '}
                 <span className="font-semibold text-foreground">multiple blockchain networks</span>{' '}
                 through our intelligent funnel system. Transform countless small balances into concentrated{' '}
                 <span className="font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  SOMI tokens
+                  wETH on Sonic
                 </span>{' '}
                 with seamless multi-chain aggregation.
               </motion.p>

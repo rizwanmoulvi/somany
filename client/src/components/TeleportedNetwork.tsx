@@ -233,11 +233,11 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
       initial="hidden"
       animate="visible"
     >
-      <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 via-background to-purple-50/30">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-blue-700">
+              <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5" />
                 Teleported Assets
               </CardTitle>
@@ -245,7 +245,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                 View your assets that have been teleported across networks
               </CardDescription>
             </div>
-            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
+            <Badge variant="outline">
               {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'No Address'}
             </Badge>
           </div>
@@ -259,10 +259,10 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Network Info Card */}
-              <Card className="bg-white/50">
+              <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-full border-2 border-blue-100 overflow-hidden">
+                    <div className="h-16 w-16 rounded-full border-2 border-gray-200 overflow-hidden">
                       <img 
                         src="https://icons.llamao.fi/icons/chains/rsz_sonic.jpg" 
                         alt="Sonic Network"
@@ -273,11 +273,11 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                       />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-blue-700">Sonic Testnet</h3>
+                      <h3 className="text-lg font-bold">Sonic Testnet</h3>
                       <p className="text-sm text-muted-foreground">Network ID: {SONIC_CHAIN_ID}</p>
                       <div className="mt-2 flex gap-2">
                         <Badge variant="secondary" className="text-xs">Testnet</Badge>
-                        <Badge variant="outline" className="text-xs bg-green-100 text-green-700">Active</Badge>
+                        <Badge variant="outline" className="text-xs">Active</Badge>
                       </div>
                     </div>
                   </div>
@@ -285,13 +285,13 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
               </Card>
               
               {/* wETH Balance Card */}
-              <Card className="bg-white/50">
+              <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between">
                       <h3 className="text-base font-medium text-muted-foreground">Wrapped ETH Balance</h3>
                       <div className="flex items-center gap-1">
-                        <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
+                        <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold">
                           w
                         </div>
                         <span className="font-semibold">wETH</span>
@@ -315,9 +315,9 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                       </div>
                     </div>
                     
-                    <div className="mt-4 text-xs text-blue-600">
+                    <div className="mt-4 text-xs text-foreground">
                       <a 
-                        href={`https://blockscout.sonic.ooo/address/${WETH_TOKEN_ADDRESS}`}
+                        href={`https://testnet.sonicscan.org/token/${WETH_TOKEN_ADDRESS}`}
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 hover:underline"
@@ -330,7 +330,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
               </Card>
               
               {/* Locked ETH Card */}
-              <Card className="bg-white/50">
+              <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between">
@@ -389,7 +389,7 @@ const TeleportedNetwork: React.FC<TeleportedNetworkProps> = ({ className }) => {
                       )}
                     </div>
                     
-                    <div className="mt-4 text-xs text-blue-600 space-y-1">
+                    <div className="mt-4 text-xs text-foreground space-y-1">
                       {Object.entries(lockedEthByChain).map(([chainIdStr]) => {
                         const chainId = Number(chainIdStr);
                         const config = LOCK_CHAIN_CONFIGS[chainId as keyof typeof LOCK_CHAIN_CONFIGS];

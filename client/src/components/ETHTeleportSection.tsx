@@ -5,7 +5,8 @@ import { TokenBalance } from '../store/tokenStore';
 import { formatTokenAmount, formatCurrency, getChainIconUrl } from '../lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Zap, ExternalLink } from 'lucide-react';
+import { TrendingUp, ExternalLink } from 'lucide-react';
+import NetworkIcon from './NetworkIcon';
 
 // Supported teleport chains
 const TELEPORT_CONFIGS = {
@@ -82,23 +83,8 @@ export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
         <CardHeader className="relative z-10">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <motion.div
-                className="inline-flex items-center justify-center w-10 h-10 bg-primary/10 rounded-full"
-                animate={{ 
-                  rotate: [0, 5, -5, 0],
-                  scale: [1, 1.05, 1]
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              >
-                <Zap className="h-5 w-5 text-primary" />
-              </motion.div>
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent font-bold">
-                ETH Teleport Center
-              </span>
+              <TrendingUp className="h-5 w-5" />
+              ETH Teleport Center
               <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                 {teleportableBalances.length} chains
               </Badge>
@@ -127,14 +113,7 @@ export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
                   transition={{ duration: 0.2 }}
                 >
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={getChainIconUrl(balance.chainId)} 
-                      alt={balance.chainName}
-                      className="h-8 w-8 rounded-full border"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${balance.chainName.slice(0,2)}&background=random&color=fff&size=64`;
-                      }}
-                    />
+                    <NetworkIcon chainId={balance.chainId} size={32} className="shadow-md" />
                     <div>
                       <div className="font-semibold text-sm text-foreground">{config.name}</div>
                       <div className="text-xs text-muted-foreground">

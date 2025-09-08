@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Vector3, CatmullRomCurve3, TubeGeometry, LatheGeometry, ShaderMaterial } from 'three';
 import * as THREE from 'three';

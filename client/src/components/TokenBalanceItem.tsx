@@ -7,7 +7,6 @@ import { Button } from './ui/button';
 import { TeleportToken } from './TeleportToken';
 import { TokenBalance, useTokenStore } from '../store/tokenStore';
 import { useTokenBalances } from '../hooks/useTokenBalances';
-import { useAccount } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { 
@@ -28,7 +27,6 @@ interface TokenBalanceItemProps {
 const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, itemVariants }) => {
   // Get refetch function to refresh balances after teleport
   const { refetch: refetchBalances } = useTokenBalances();
-  const { address } = useAccount();
   const { triggerTeleportRefresh } = useTokenStore();
   const queryClient = useQueryClient();
   // Supported chains and their contract addresses
@@ -221,79 +219,23 @@ const TokenBalanceItem: React.FC<TokenBalanceItemProps> = ({ balance, isDust, it
               });
             }}
             onTeleportComplete={() => {
-              // Keep loading state until relayer confirms completion
-              toast.success('Transaction sent! Waiting for relayer to process...', {
+              // Show immediate completion
+              setIsTeleporting(false);
+              toast.success('Teleport transaction completed successfully! 🚀', {
                 id: 'teleport-toast',
-                duration: 2000 // Auto-dismiss after 2 seconds
+                duration: 3000
               });
               
-              // Poll relayer API for mint completion
-              const pollRelayerStatus = async () => {
-                let attempts = 0;
-                const maxAttempts = 60; // 60 attempts over ~2 minutes
-                const pollInterval = 2000; // 2 seconds between polls
-                const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
-                
-                const poll = async () => {
-                  attempts++;
-                  console.log(`Checking relayer status (attempt ${attempts}/${maxAttempts})...`);
-                  
-                  try {
-                    // Check if relayer has completed the mint for this user
-                    const response = await fetch(`${relayerUrl}/api/mint-status/${address}`);
-                    const data = await response.json();
-                    
-                    if (data.completed) {
-                      console.log('Relayer confirmed mint completion:', data);
-                      setIsTeleporting(false);
-                      toast.success('Teleport completed! Refreshing balances...', {
-                        id: 'teleport-toast',
-                        duration: 2000 // Auto-dismiss after 2 seconds
-                      });
-                      
-                      // Refetch both main balances and trigger teleported network refresh
-                      setTimeout(async () => {
-                        // Force a fresh fetch by invalidating and refetching
-                        queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
-                        await refetchBalances();
-                        triggerTeleportRefresh(); // This will trigger TeleportedNetwork to refetch
-                        toast.success('Balances updated!', {
-                          duration: 2000
-                        });
-                      }, 1000);
-                      return;
-                    }
-                    
-                    if (attempts >= maxAttempts) {
-                      setIsTeleporting(false);
-                      toast.error('Timeout waiting for relayer. Transaction may still be processing.', {
-                        id: 'teleport-toast',
-                        duration: 2000
-                      });
-                      return;
-                    }
-                    
-                    // Continue polling
-                    setTimeout(poll, pollInterval);
-                  } catch (error) {
-                    console.error('Error checking relayer status:', error);
-                    if (attempts >= maxAttempts) {
-                      setIsTeleporting(false);
-                      toast.error('Unable to confirm completion. Please check balances manually.', {
-                        id: 'teleport-toast',
-                        duration: 2000
-                      });
-                    } else {
-                      setTimeout(poll, pollInterval);
-                    }
-                  }
-                };
-                
-                // Start polling after a short delay to allow transaction to be mined
-                setTimeout(poll, 5000);
-              };
-              
-              pollRelayerStatus();
+              // Refresh balances after a short delay
+              setTimeout(async () => {
+                // Force a fresh fetch by invalidating and refetching
+                queryClient.invalidateQueries({ queryKey: ['tokenBalances'] });
+                await refetchBalances();
+                triggerTeleportRefresh(); // This will trigger TeleportedNetwork to refetch
+                toast.success('Balances refreshed!', {
+                  duration: 2000
+                });
+              }, 2000);
             }}
             onTeleportError={(error) => {
               setIsTeleporting(false);

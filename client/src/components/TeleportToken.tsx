@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { parseEther } from 'viem';
 import { useAccount, useChainId, useWriteContract } from 'wagmi';
-import { Zap } from 'lucide-react';
 
 interface TeleportTokenProps {
   chainId: number;

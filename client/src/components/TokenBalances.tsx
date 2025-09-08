@@ -1,15 +1,12 @@
 import React, { useEffect } from 'react';
-import { useAccount, useChainId } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { motion } from 'framer-motion';
 import { Wallet, TrendingUp, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { useTokenBalances } from '../hooks/useTokenBalances';
 import { useTokenStore } from '../store/tokenStore';
 import { formatCurrency } from '../lib/utils';
-import { cn } from '../lib/utils';
-import TokenBalanceItem from './TokenBalanceItem';
 import TeleportedNetwork from './TeleportedNetwork';
 import { ETHTeleportSection } from './ETHTeleportSection';
 
@@ -45,79 +42,110 @@ const TokenBalances: React.FC = () => {
 
   if (!isConnected) {
     return (
-      <div className="w-full max-w-5xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
         >
-          <Card className="relative overflow-hidden border-dashed border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-purple-50/30">
-            <CardContent className="py-16 px-8">
-              {/* Background decoration */}
-              <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl" />
+          {/* Hero Section */}
+          <div className="relative min-h-[600px] flex items-center justify-center">
+            {/* Background Elements */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute top-20 left-10 w-64 h-64 bg-black/5 rounded-full blur-3xl" />
+              <div className="absolute bottom-20 right-10 w-80 h-80 bg-gray-900/5 rounded-full blur-3xl" />
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-black/3 to-gray-700/3 rounded-full blur-3xl" />
+            </div>
+            
+            {/* Main Content */}
+            <div className="relative z-10 max-w-4xl mx-auto px-6">
+              {/* Wallet Icon */}
+              <motion.div
+                className="inline-flex items-center justify-center w-24 h-24 bg-black rounded-2xl mb-8 shadow-2xl"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                whileHover={{ scale: 1.05 }}
+              >
+                <Wallet className="h-12 w-12 text-white" />
+              </motion.div>
               
-              {/* Content */}
-              <div className="relative z-10">
-                <motion.div
-                  className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6"
-                  animate={{ 
-                    rotate: [0, 5, -5, 0],
-                    scale: [1, 1.05, 1]
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  <Wallet className="h-10 w-10 text-primary" />
-                </motion.div>
-                
-                <h3 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  Connect Your Wallet
-                </h3>
-                
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
-                  Connect your wallet to discover and aggregate your token balances across{' '}
-                  <span className="font-semibold text-foreground">multiple blockchain networks</span>.
-                  Start your dust aggregation journey today.
-                </p>
+              {/* Main Headline */}
+              <motion.h2 
+                className="text-6xl md:text-7xl font-black text-black mb-6 tracking-tight"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                Connect Your
+                <br />
+                <span className="bg-gradient-to-r from-gray-800 to-black bg-clip-text text-transparent">
+                  Wallet
+                </span>
+              </motion.h2>
+              
+              {/* Subtitle */}
+              <motion.p 
+                className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto mb-12 leading-relaxed font-medium"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+              >
+                Discover and aggregate your token balances across 
+                <span className="text-black font-bold">15+ blockchain networks</span>. 
+                Turn your dust into treasure.
+              </motion.p>
 
-                {/* Feature preview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-                  <motion.div
-                    className="flex items-center gap-3 p-4 bg-background/50 rounded-lg border border-primary/10"
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-sm font-medium">Multi-Chain Detection</span>
-                  </motion.div>
-                  
-                  <motion.div
-                    className="flex items-center gap-3 p-4 bg-background/50 rounded-lg border border-primary/10"
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
-                    <span className="text-sm font-medium">Real-Time Pricing</span>
-                  </motion.div>
-                  
-                  <motion.div
-                    className="flex items-center gap-3 p-4 bg-background/50 rounded-lg border border-primary/10"
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse" />
-                    <span className="text-sm font-medium">Dust Aggregation</span>
-                  </motion.div>
+              {/* Feature Cards */}
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.8 }}
+              >
+                <div className="group bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                  <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <div className="w-3 h-3 bg-white rounded-full" />
+                  </div>
+                  <h3 className="text-lg font-bold text-black mb-2">Multi-Chain Detection</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">Automatically scan across 15+ networks</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                
+                <div className="group bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                  <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-black mb-2">Real-Time Pricing</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">Live USD values for all your tokens</p>
+                </div>
+                
+                <div className="group bg-white border border-gray-200 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                  <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-black mb-2">Dust Aggregation</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">Convert small balances into wETH on Sonic</p>
+                </div>
+              </motion.div>
+
+              {/* Call to Action */}
+              <motion.div
+                className="bg-gray-50 rounded-2xl p-8 border border-gray-200"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 1.0 }}
+              >
+                <p className="text-lg text-gray-700 mb-4">
+                  Ready to start? Click the <span className="font-bold text-black">Connect Wallet</span> button above
+                </p>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span>Secure connection via RainbowKit</span>
+                </div>
+              </motion.div>
+            </div>
+          </div>
         </motion.div>
       </div>
     );
@@ -163,7 +191,7 @@ const TokenBalances: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <motion.div 
                 className="text-center p-6 rounded-lg bg-muted/30 border"
                 whileHover={{ scale: 1.02 }}
@@ -199,26 +227,7 @@ const TokenBalances: React.FC = () => {
                   </div>
                 </div>
               </motion.div>
-              
-              <motion.div 
-                className="text-center p-6 rounded-lg bg-muted/30 border"
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center justify-center gap-1">
-                    <Sparkles className="h-4 w-4" />
-                    Dust Tokens
-                  </p>
-                  <div className="text-3xl font-bold">
-                    {isLoading ? (
-                      <Skeleton className="h-10 w-16 mx-auto" />
-                    ) : (
-                      dustTokens.length
-                    )}
-                  </div>
-                </div>
-              </motion.div>
+
             </div>
           </CardContent>
         </Card>
@@ -232,67 +241,6 @@ const TokenBalances: React.FC = () => {
         />
       )}
       
-
-
-      {/* Token Balances */}
-      {/* <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Token Balances</CardTitle>
-            <CardDescription>
-              Live balances with real-time pricing from Chainlink oracles
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : error ? (
-              <div className="text-center py-12">
-                <p className="text-destructive">Failed to fetch token balances</p>
-                <p className="text-sm text-muted-foreground mt-1">{String(error)}</p>
-              </div>
-            ) : balances && balances.length > 0 ? (
-              <div className="space-y-2">
-                {balances.map((balance) => {
-                  const isDust = dustTokens.some(dust => 
-                    dust.chainId === balance.chainId && dust.symbol === balance.symbol
-                  );
-                  
-                  return (
-                    <TokenBalanceItem 
-                      key={`${balance.chainId}-${balance.symbol}-${balance.tokenAddress || 'native'}`}
-                      balance={balance}
-                      isDust={isDust}
-                      itemVariants={itemVariants}
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No token balances found</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div> */}
 
       {/* Footer Note */}
       <motion.div variants={itemVariants} className="text-center">

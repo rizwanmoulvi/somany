@@ -2,8 +2,6 @@
 // Relayer that listens to EthLock on source chain and mints on destination chain.
 
 const { ethers } = require("ethers");
-const express = require("express");
-const cors = require("cors");
 require("dotenv").config();
 
 /// CONFIG
@@ -27,53 +25,6 @@ const DST_RPC = process.env.DST_RPC;  // Destination chain RPC (Lasna)
 const RELAYER_PRIVATE_KEY = process.env.PRIVATE_KEY; // Same relayer key allowed on mintable token
 const TOKEN_CONTRACT = process.env.TOKEN_CONTRACT; // deployed RelayerMintableToken
 
-// Store completed mints for frontend to query
-const completedMints = new Map(); // user address -> Array of { txHash, amount, timestamp, sourceChain, consumed: false }
-
-// Setup Express server for frontend communication
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// Endpoint to check if minting is complete for a user
-app.get('/api/mint-status/:userAddress', (req, res) => {
-  const userAddress = req.params.userAddress.toLowerCase();
-  const userMints = completedMints.get(userAddress) || [];
-  
-  // Find the first unconsumed mint
-  const availableMint = userMints.find(mint => !mint.consumed);
-  
-  if (availableMint) {
-    // Mark as consumed
-    availableMint.consumed = true;
-    
-    // Clean up old consumed mints (keep only last 5 for safety)
-    const unconsumedMints = userMints.filter(mint => !mint.consumed);
-    const recentConsumedMints = userMints.filter(mint => mint.consumed).slice(-5);
-    completedMints.set(userAddress, [...unconsumedMints, ...recentConsumedMints]);
-    
-    res.json({ 
-      completed: true, 
-      txHash: availableMint.txHash, 
-      amount: availableMint.amount,
-      timestamp: availableMint.timestamp,
-      sourceChain: availableMint.sourceChain 
-    });
-  } else {
-    res.json({ completed: false });
-  }
-});
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'relayer' });
-});
-
-// Start the HTTP server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Relayer API server listening on port ${PORT}`);
-});
 
 async function main() {
   // Destination provider and relayer signer
@@ -142,20 +93,7 @@ async function main() {
               const tx = await token.mint(user, mintAmount);
               console.log(`${chainSetup.name}: Mint tx sent:`, tx.hash);
               await tx.wait();
-              console.log(`${chainSetup.name}: Minted successfully for`, user);
-              
-              // Store completion data for frontend to query
-              const userAddress = user.toLowerCase();
-              const userMints = completedMints.get(userAddress) || [];
-              userMints.push({
-                txHash: tx.hash,
-                amount: mintAmount.toString(),
-                timestamp: Date.now(),
-                sourceChain: chainSetup.name,
-                consumed: false
-              });
-              completedMints.set(userAddress, userMints);
-              console.log(`${chainSetup.name}: Mint completion stored for ${user}`);
+              console.log(`${chainSetup.name}: Minted successfully for ${user} - ${ethers.formatEther(mintAmount)} tokens`);
             } catch (err) {
               console.error(`${chainSetup.name}: Mint failed:`, err);
             }

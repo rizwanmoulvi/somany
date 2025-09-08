@@ -6,7 +6,7 @@ import { Vector3, CatmullRomCurve3, TubeGeometry, LatheGeometry, ShaderMaterial 
 import * as THREE from 'three';
 
 // Utility to create reusable materials
-const createMaterial = (options) => new THREE.MeshStandardMaterial(options);
+const createMaterial = (options: THREE.MeshStandardMaterialParameters) => new THREE.MeshStandardMaterial(options);
 
 function ModernFunnel() {
   const funnelRef = useRef<THREE.Group>(null);

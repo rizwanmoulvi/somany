@@ -179,7 +179,7 @@ const Home: NextPage = () => {
                     alt="Friend's Twitter"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.src = "https://pbs.twimg.com/profile_images/1934881304996446208/eyNP67zO_400x400.jpg"
+                      (e.target as HTMLImageElement).src = "https://pbs.twimg.com/profile_images/1934881304996446208/eyNP67zO_400x400.jpg"
                     }}
                   />
                 </div>
@@ -214,7 +214,7 @@ const Home: NextPage = () => {
                     alt="Adil's Twitter"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.src = "https://pbs.twimg.com/profile_images/1947715281520103424/riYRziYF_400x400.jpg"
+                      (e.target as HTMLImageElement).src = "https://pbs.twimg.com/profile_images/1947715281520103424/riYRziYF_400x400.jpg"
                     }}
                   />
                 </div>

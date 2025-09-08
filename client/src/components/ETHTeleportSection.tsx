@@ -36,7 +36,7 @@ interface ChainBalance {
   price: number;
 }
 
-export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
+const ETHTeleportSectionComponent: React.FC<ETHTeleportSectionProps> = ({
   balances,
   itemVariants
 }) => {
@@ -170,4 +170,8 @@ export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
       </Card>
     </motion.div>
   );
-});
+};
+
+ETHTeleportSectionComponent.displayName = 'ETHTeleportSection';
+
+export const ETHTeleportSection = memo(ETHTeleportSectionComponent);

@@ -375,17 +375,7 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
 
   if (step === 'config') {
     return (
-      <Card className="w-full border-blue-200 bg-gradient-to-br from-blue-50/30 to-purple-50/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-blue-600" />
-            Multi-Chain Teleport
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Set amounts for each chain and teleport them all in sequence
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <div className="space-y-6">
           {/* Chain Configuration */}
           <div className="space-y-4">
             {chainBalances.map(({ chainId, balance, price }) => {
@@ -438,35 +428,50 @@ export const UnifiedTeleport: React.FC<UnifiedTeleportProps> = ({
             })}
           </div>
 
-          {/* Summary */}
+          {/* Summary & Action Button - Side by Side */}
           {activeTeleports.length > 0 && (
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-              <h4 className="font-medium mb-2">Teleport Summary</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Total Chains:</span>
-                  <span className="font-medium">{activeTeleports.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Value:</span>
-                  <span className="font-medium">{formatCurrency(totalValue)}</span>
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              {/* Summary */}
+              <div className="flex-1 p-4 rounded-lg bg-blue-50 border border-blue-200">
+                <h4 className="font-medium mb-2">Teleport Summary</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Total Chains:</span>
+                    <span className="font-medium">{activeTeleports.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Value:</span>
+                    <span className="font-medium">{formatCurrency(totalValue)}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Action Button */}
+              <Button 
+                onClick={executeTeleports}
+                disabled={!isConnected || activeTeleports.length === 0}
+                className="w-full sm:w-auto sm:min-w-[240px]"
+                size="lg"
+              >
+                <Zap className="mr-2 h-4 w-4" />
+                Start Multi-Chain Teleport ({activeTeleports.length} chains)
+              </Button>
             </div>
           )}
 
-          {/* Action Button */}
-          <Button 
-            onClick={executeTeleports}
-            disabled={!isConnected || activeTeleports.length === 0}
-            className="w-full"
-            size="lg"
-          >
-            <Zap className="mr-2 h-4 w-4" />
-            Start Multi-Chain Teleport ({activeTeleports.length} chains)
-          </Button>
-        </CardContent>
-      </Card>
+          {/* Show button alone if no active teleports */}
+          {activeTeleports.length === 0 && (
+            <Button 
+              onClick={executeTeleports}
+              disabled={!isConnected || activeTeleports.length === 0}
+              className="w-full"
+              size="lg"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Start Multi-Chain Teleport ({activeTeleports.length} chains)
+            </Button>
+          )}
+        </div>
     );
   }
 

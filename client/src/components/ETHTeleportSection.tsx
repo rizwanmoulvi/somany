@@ -73,36 +73,58 @@ export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
       variants={itemVariants}
       className="mb-6"
     >
-      <Card className="border-blue-200 bg-gradient-to-br from-blue-50/30 to-purple-50/20">
-        <CardHeader>
+      <Card className="relative overflow-hidden bg-white">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl" />
+        
+        <CardHeader className="relative z-10">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-blue-600" />
-              <span>ETH Teleport Center</span>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+              <motion.div
+                className="inline-flex items-center justify-center w-10 h-10 bg-primary/10 rounded-full"
+                animate={{ 
+                  rotate: [0, 5, -5, 0],
+                  scale: [1, 1.05, 1]
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <Zap className="h-5 w-5 text-primary" />
+              </motion.div>
+              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent font-bold">
+                ETH Teleport Center
+              </span>
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                 {teleportableBalances.length} chains
               </Badge>
             </div>
             <div className="text-right text-sm">
-              <div className="font-medium">
+              <div className="font-bold text-lg">
                 {formatTokenAmount(totalETH.toString())} ETH
               </div>
-              <div className="text-muted-foreground">
+              <div className="text-muted-foreground font-medium">
                 {formatCurrency(totalValue)}
               </div>
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6 relative z-10">
           {/* Chain Overview */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {teleportableBalances.map((balance) => {
               const config = TELEPORT_CONFIGS[balance.chainId as keyof typeof TELEPORT_CONFIGS];
               
               return (
-                <div 
+                <motion.div 
                   key={balance.chainId}
-                  className="flex items-center justify-between p-3 rounded-lg bg-white/50 border"
+                  className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-primary/10"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <div className="flex items-center gap-3">
                     <img 
@@ -114,7 +136,7 @@ export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
                       }}
                     />
                     <div>
-                      <div className="font-medium text-sm">{config.name}</div>
+                      <div className="font-semibold text-sm text-foreground">{config.name}</div>
                       <div className="text-xs text-muted-foreground">
                         ID: {balance.chainId}
                       </div>
@@ -122,14 +144,14 @@ export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
                   </div>
                   
                   <div className="text-right">
-                    <div className="font-medium text-sm">
+                    <div className="font-bold text-sm">
                       {formatTokenAmount(balance.formattedBalance)} ETH
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {balance.value ? formatCurrency(balance.value) : '—'}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -145,21 +167,23 @@ export const ETHTeleportSection: React.FC<ETHTeleportSectionProps> = memo(({
           />
 
           {/* Explorer Links */}
-          <div className="flex flex-wrap gap-2 pt-2 border-t">
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-primary/10">
             {teleportableBalances.map((balance) => {
               const config = TELEPORT_CONFIGS[balance.chainId as keyof typeof TELEPORT_CONFIGS];
               
               return (
-                <a
+                <motion.a
                   key={balance.chainId}
                   href={`${config.explorerUrl}/address/${config.lockContract}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 hover:underline font-medium"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
                 >
                   View {config.name} contract
                   <ExternalLink className="h-3 w-3" />
-                </a>
+                </motion.a>
               );
             })}
           </div>
